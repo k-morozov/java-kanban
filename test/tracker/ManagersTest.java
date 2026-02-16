@@ -1,6 +1,13 @@
 package tracker;
 
 import org.junit.jupiter.api.Test;
+import tracker.HistoryManager.HistoryManager;
+import tracker.HistoryManager.InMemoryHistoryManager;
+import tracker.TaskManager.InMemoryTaskManager;
+import tracker.TaskManager.TaskManager;
+import tracker.issue.TaskView;
+import tracker.issue.Status;
+import tracker.issue.Task;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,7 +20,7 @@ class ManagersTest {
         assertNotNull(manager);
         assertInstanceOf(TaskManager.class, manager);
 
-        Task task = manager.createTask("Тестовая задача", "Описание", TaskStatus.NEW);
+        TaskView task = manager.createTask("Тестовая задача", "Описание", Status.NEW);
         assertNotNull(task);
         assertNotNull(manager.getTask(task.getId()));
     }
@@ -25,7 +32,7 @@ class ManagersTest {
         assertNotNull(historyManager);
         assertInstanceOf(HistoryManager.class, historyManager);
 
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
+        Task task = new Task("Задача", "Описание", 1, Status.NEW);
         historyManager.add(task);
 
         assertNotNull(historyManager.getHistory());
@@ -39,7 +46,7 @@ class ManagersTest {
 
         assertNotSame(manager1, manager2);
 
-        Task task1 = manager1.createTask("Задача 1", "Описание", TaskStatus.NEW);
+        TaskView task1 = manager1.createTask("Задача 1", "Описание", Status.NEW);
 
         assertNotNull(manager1.getTask(task1.getId()));
         assertNull(manager2.getTask(task1.getId()));
@@ -52,7 +59,7 @@ class ManagersTest {
 
         assertNotSame(history1, history2);
 
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
+        Task task = new Task("Задача", "Описание", 1, Status.NEW);
         history1.add(task);
 
         assertEquals(1, history1.getHistory().size());
