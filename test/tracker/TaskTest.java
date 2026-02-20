@@ -1,6 +1,10 @@
 package tracker;
 
 import org.junit.jupiter.api.Test;
+import tracker.issue.Epic;
+import tracker.issue.Status;
+import tracker.issue.Subtask;
+import tracker.issue.Task;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -8,8 +12,8 @@ class TaskTest {
 
     @Test
     void shouldBeEqualIfIdIsEqual() {
-        Task task1 = new Task("Задача 1", "Описание 1", 1, TaskStatus.NEW);
-        Task task2 = new Task("Задача 2", "Описание 2", 1, TaskStatus.DONE);
+        Task task1 = new Task("Задача 1", "Описание 1", 1, Status.NEW);
+        Task task2 = new Task("Задача 2", "Описание 2", 1, Status.DONE);
 
         assertEquals(task1, task2);
         assertEquals(task1.hashCode(), task2.hashCode());
@@ -17,8 +21,8 @@ class TaskTest {
 
     @Test
     void shouldNotBeEqualIfIdIsDifferent() {
-        Task task1 = new Task("Задача 1", "Описание 1", 1, TaskStatus.NEW);
-        Task task2 = new Task("Задача 1", "Описание 1", 2, TaskStatus.NEW);
+        Task task1 = new Task("Задача 1", "Описание 1", 1, Status.NEW);
+        Task task2 = new Task("Задача 1", "Описание 1", 2, Status.NEW);
 
         assertNotEquals(task1, task2);
     }
@@ -34,8 +38,8 @@ class TaskTest {
 
     @Test
     void shouldBeEqualForSubtasksWithSameId() {
-        Subtask subtask1 = new Subtask("Подзадача 1", "Описание 1", 1, TaskStatus.NEW, 10);
-        Subtask subtask2 = new Subtask("Подзадача 2", "Описание 2", 1, TaskStatus.DONE, 20);
+        Subtask subtask1 = new Subtask("Подзадача 1", "Описание 1", 1, Status.NEW, 10);
+        Subtask subtask2 = new Subtask("Подзадача 2", "Описание 2", 1, Status.DONE, 20);
 
         assertEquals(subtask1, subtask2);
         assertEquals(subtask1.hashCode(), subtask2.hashCode());
@@ -43,7 +47,7 @@ class TaskTest {
 
     @Test
     void shouldNotBeEqualForDifferentClassesWithSameId() {
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
+        Task task = new Task("Задача", "Описание", 1, Status.NEW);
         Epic epic = new Epic("Эпик", "Описание", 1);
 
         assertNotEquals(task, epic);
@@ -60,28 +64,28 @@ class TaskTest {
 
     @Test
     void shouldNotMakeSubtaskItsOwnEpic() {
-        Subtask subtask = new Subtask("Подзадача", "Описание", 1, TaskStatus.NEW, 1);
+        Subtask subtask = new Subtask("Подзадача", "Описание", 1, Status.NEW, 1);
 
         assertEquals(1, subtask.getId());
         assertEquals(1, subtask.getEpicId());
     }
 
     @Test
-    void shouldChangeTaskStatus() {
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
+    void shouldChangeStatus() {
+        Task task = new Task("Задача", "Описание", 1, Status.NEW);
 
-        assertEquals(TaskStatus.NEW, task.getStatus());
+        assertEquals(Status.NEW, task.getStatus());
 
-        task.setStatus(TaskStatus.IN_PROGRESS);
-        assertEquals(TaskStatus.IN_PROGRESS, task.getStatus());
+        task.setStatus(Status.IN_PROGRESS);
+        assertEquals(Status.IN_PROGRESS, task.getStatus());
 
-        task.setStatus(TaskStatus.DONE);
-        assertEquals(TaskStatus.DONE, task.getStatus());
+        task.setStatus(Status.DONE);
+        assertEquals(Status.DONE, task.getStatus());
     }
 
     @Test
     void shouldChangeTaskTitleAndDescription() {
-        Task task = new Task("Старое название", "Старое описание", 1, TaskStatus.NEW);
+        Task task = new Task("Старое название", "Старое описание", 1, Status.NEW);
 
         assertEquals("Старое название", task.getTitle());
         assertEquals("Старое описание", task.getDescription());
@@ -126,7 +130,7 @@ class TaskTest {
 
     @Test
     void shouldChangeSubtaskEpicId() {
-        Subtask subtask = new Subtask("Подзадача", "Описание", 1, TaskStatus.NEW, 10);
+        Subtask subtask = new Subtask("Подзадача", "Описание", 1, Status.NEW, 10);
 
         assertEquals(10, subtask.getEpicId());
 

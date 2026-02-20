@@ -1,43 +1,50 @@
-package tracker;
+package tracker.issue;
 
-class Task {
-    protected String title;
-    protected String description;
-    protected int id;
-    protected TaskStatus status;
+public abstract class AbstractIssue implements Issue {
+    private final int issueId;
+    private String title;
+    private String description;
+    private Status status;
 
-    public Task(String title, String description, int id, TaskStatus status) {
+    public AbstractIssue(String title, String description, int issueId, Status status) {
+        this.issueId = issueId;
         this.title = title;
         this.description = description;
-        this.id = id;
         this.status = status;
     }
 
+    @Override
+    public int getId() {
+        return issueId;
+    }
+
+    @Override
     public String getTitle() {
         return title;
     }
 
+    @Override
     public void setTitle(String title) {
         this.title = title;
     }
 
+    @Override
     public String getDescription() {
         return description;
     }
 
+    @Override
     public void setDescription(String description) {
         this.description = description;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public TaskStatus getStatus() {
+    @Override
+    public Status getStatus() {
         return status;
     }
 
-    public void setStatus(TaskStatus status) {
+    @Override
+    public void setStatus(Status status) {
         this.status = status;
     }
 
@@ -45,12 +52,12 @@ class Task {
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
-        Task task = (Task) obj;
-        return id == task.id;
+        Issue task = (Issue) obj;
+        return this.getId() == task.getId();
     }
 
     @Override
     public int hashCode() {
-        return Integer.hashCode(id);
+        return Integer.hashCode(this.getId());
     }
 }

@@ -1,16 +1,18 @@
-package tracker;
+package tracker.issue;
 
 import java.util.ArrayList;
+import java.util.List;
 
-class Epic extends Task {
-    private ArrayList<Integer> subtaskIds;
+public final class Epic extends AbstractIssue implements ReadableEpic {
+    private final ArrayList<Integer> subtaskIds;
 
-    public Epic(String title, String description, int id) {
-        super(title, description, id, TaskStatus.NEW);
+    public Epic(String title, String description, int issueId) {
+        super(title, description, issueId, Status.NEW);
         this.subtaskIds = new ArrayList<>();
     }
 
-    public ArrayList<Integer> getSubtaskIds() {
+    @Override
+    public List<Integer> getSubtaskIds() {
         return subtaskIds;
     }
 

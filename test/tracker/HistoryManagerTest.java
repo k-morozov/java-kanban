@@ -1,7 +1,10 @@
 package tracker;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import tracker.HistoryManager.HistoryManager;
+import tracker.issue.*;
 
 import java.util.List;
 
@@ -10,139 +13,124 @@ import static org.junit.jupiter.api.Assertions.*;
 class HistoryManagerTest {
 
     private HistoryManager historyManager;
+    private Task task1;
+    private Task task2;
+    private Task task3;
 
     @BeforeEach
     void setUp() {
         historyManager = Managers.getDefaultHistory();
+        task1 = new Task("Task 1", "Description 1", 1, Status.NEW);
+        task2 = new Task("Task 2", "Description 2", 2, Status.NEW);
+        task3 = new Task("Task 3", "Description 3", 3, Status.NEW);
     }
 
     @Test
     void shouldAddTaskToHistory() {
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
-
-        historyManager.add(task);
-
-        List<Task> history = historyManager.getHistory();
-        assertNotNull(history);
-        assertEquals(1, history.size());
-        assertEquals(task, history.get(0));
-    }
-
-    @Test
-    void shouldAddMultipleTasksToHistory() {
-        Task task1 = new Task("Задача 1", "Описание 1", 1, TaskStatus.NEW);
-        Task task2 = new Task("Задача 2", "Описание 2", 2, TaskStatus.NEW);
-        Task task3 = new Task("Задача 3", "Описание 3", 3, TaskStatus.NEW);
-
         historyManager.add(task1);
-        historyManager.add(task2);
-        historyManager.add(task3);
-
-        List<Task> history = historyManager.getHistory();
-        assertEquals(3, history.size());
-        assertEquals(task1, history.get(0));
-        assertEquals(task2, history.get(1));
-        assertEquals(task3, history.get(2));
+        List<ReadableIssue> history = historyManager.getHistory();
+        assertNotNull(history, "History should not be null.");
+        assertEquals(1, history.size(), "History size should be 1.");
+        assertEquals(task1, history.get(0), "History should contain the added task.");
     }
 
     @Test
-    void shouldLimitHistoryTo10Elements() {
-        for (int i = 1; i <= 15; i++) {
-            Task task = new Task("Задача " + i, "Описание " + i, i, TaskStatus.NEW);
-            historyManager.add(task);
-        }
-
-        List<Task> history = historyManager.getHistory();
-        assertEquals(10, history.size());
-        assertEquals(6, history.get(0).getId());
-        assertEquals(15, history.get(9).getId());
-    }
-
-    @Test
-    void shouldRemoveOldestTaskWhenLimitExceeded() {
-        Task oldTask = new Task("Старая задача", "Описание", 1, TaskStatus.NEW);
-        historyManager.add(oldTask);
-
-        for (int i = 2; i <= 11; i++) {
-            Task task = new Task("Задача " + i, "Описание " + i, i, TaskStatus.NEW);
-            historyManager.add(task);
-        }
-
-        List<Task> history = historyManager.getHistory();
-        assertEquals(10, history.size());
-        assertFalse(history.contains(oldTask));
-        assertEquals(2, history.get(0).getId());
+    void shouldHandleEmptyHistory() {
+        List<ReadableIssue> history = historyManager.getHistory();
+        assertNotNull(history, "History list should be initialized even if empty.");
+        assertTrue(history.isEmpty(), "History should be empty by default.");
     }
 
     @Test
     void shouldNotAddNullToHistory() {
         historyManager.add(null);
+        List<ReadableIssue> history = historyManager.getHistory();
+        assertEquals(0, history.size(), "History size should remain 0 after adding null.");
+    }
 
-        List<Task> history = historyManager.getHistory();
-        assertEquals(0, history.size());
+    @Test
+    void shouldRemoveOldDuplicateAndMoveTaskToTail() {
+        historyManager.add(task1);
+        historyManager.add(task2);
+        historyManager.add(task1);
+
+        List<ReadableIssue> history = historyManager.getHistory();
+        assertEquals(2, history.size(), "Duplicates should be removed from history.");
+        assertEquals(task2, history.get(0), "The first element should be task2.");
+        assertEquals(task1, history.get(1), "The re-added task should be moved to the end (tail).");
+    }
+
+    @Test
+    void shouldRemoveFromBeginningOfHistory() {
+        historyManager.add(task1);
+        historyManager.add(task2);
+        historyManager.add(task3);
+
+        historyManager.remove(task1.getId());
+        List<ReadableIssue> history = historyManager.getHistory();
+
+        assertEquals(2, history.size(), "History size should be 2.");
+        assertEquals(task2, history.get(0), "Task 2 should now be at the head.");
+    }
+
+    @Test
+    void shouldRemoveFromMiddleOfHistory() {
+        historyManager.add(task1);
+        historyManager.add(task2);
+        historyManager.add(task3);
+
+        historyManager.remove(task2.getId());
+        List<ReadableIssue> history = historyManager.getHistory();
+
+        assertEquals(2, history.size(), "History size should be 2.");
+        assertEquals(task1, history.get(0));
+        assertEquals(task3, history.get(1));
+    }
+
+    @Test
+    void shouldRemoveFromEndOfHistory() {
+        historyManager.add(task1);
+        historyManager.add(task2);
+        historyManager.add(task3);
+
+        historyManager.remove(task3.getId());
+        List<ReadableIssue> history = historyManager.getHistory();
+
+        assertEquals(2, history.size());
+        assertEquals(task2, history.get(1), "Task 2 should now be the tail.");
+    }
+
+    @Test
+    void shouldHandleRemovingOnlyElement() {
+        historyManager.add(task1);
+        historyManager.remove(task1.getId());
+
+        List<ReadableIssue> history = historyManager.getHistory();
+        assertTrue(history.isEmpty(), "History should be empty after removing the only element.");
     }
 
     @Test
     void shouldReturnCopyOfHistory() {
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
-        historyManager.add(task);
+        historyManager.add(task1);
+        List<ReadableIssue> history1 = historyManager.getHistory();
+        List<ReadableIssue> history2 = historyManager.getHistory();
 
-        List<Task> history1 = historyManager.getHistory();
-        List<Task> history2 = historyManager.getHistory();
-
-        assertNotSame(history1, history2);
+        assertNotSame(history1, history2, "getHistory should return a new list instance.");
     }
 
     @Test
     void shouldAddDifferentTaskTypes() {
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
-        Epic epic = new Epic("Эпик", "Описание", 2);
-        Subtask subtask = new Subtask("Подзадача", "Описание", 3, TaskStatus.NEW, 2);
+        Epic epic = new Epic("Epic", "Desc", 2);
+        Subtask subtask = new Subtask("Sub", "Desc", 3, Status.NEW, 2);
 
-        historyManager.add(task);
+        historyManager.add(task1);
         historyManager.add(epic);
         historyManager.add(subtask);
 
-        List<Task> history = historyManager.getHistory();
+        List<ReadableIssue> history = historyManager.getHistory();
         assertEquals(3, history.size());
-        assertEquals(task, history.get(0));
-        assertEquals(epic, history.get(1));
-        assertEquals(subtask, history.get(2));
-    }
-
-    @Test
-    void shouldPreserveTaskDataInHistory() {
-        Task task = new Task("Исходное название", "Исходное описание", 1, TaskStatus.NEW);
-
-        historyManager.add(task);
-
-        task.setTitle("Новое название");
-        task.setDescription("Новое описание");
-        task.setStatus(TaskStatus.DONE);
-
-        List<Task> history = historyManager.getHistory();
-        Task taskFromHistory = history.get(0);
-
-        assertEquals(task, taskFromHistory);
-    }
-
-    @Test
-    void shouldReturnEmptyHistoryInitially() {
-        List<Task> history = historyManager.getHistory();
-
-        assertNotNull(history);
-        assertEquals(0, history.size());
-    }
-
-    @Test
-    void shouldAllowDuplicatesInHistory() {
-        Task task = new Task("Задача", "Описание", 1, TaskStatus.NEW);
-
-        historyManager.add(task);
-        historyManager.add(task);
-        historyManager.add(task);
-
-        List<Task> history = historyManager.getHistory();
-        assertEquals(3, history.size());
+        assertTrue(history.contains(task1));
+        assertTrue(history.contains(epic));
+        assertTrue(history.contains(subtask));
     }
 }
