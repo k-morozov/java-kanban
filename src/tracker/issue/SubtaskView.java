@@ -9,4 +9,8 @@ public final class SubtaskView extends IssueView<Subtask> implements ReadableSub
     public int getEpicId() {
         return getIssue().getEpicId();
     }
+
+    public String serialize(Formatter formatter) {
+        return formatter.serialize(getIssue());
+    }
 }

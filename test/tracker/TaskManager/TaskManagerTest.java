@@ -1,10 +1,10 @@
-package tracker;
+package tracker.TaskManager;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import tracker.TaskManager.TaskManager;
+import tracker.Managers;
 import tracker.issue.*;
 
 import java.util.List;
