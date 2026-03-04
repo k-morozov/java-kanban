@@ -48,7 +48,6 @@ public class FileBackedTaskManager extends AbstractTaskManager {
         this.formatter = new CSVFormatter();
 
         loadFromFile();
-        dump();
     }
 
     private void loadFromFile() {
@@ -56,6 +55,7 @@ public class FileBackedTaskManager extends AbstractTaskManager {
         try {
             if (!Files.exists(path)) {
                 Files.createFile(path);
+                dump();
             } else {
                 String lines = Files.readString(path);
 
