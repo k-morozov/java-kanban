@@ -9,7 +9,11 @@ import java.util.List;
 public final class InMemoryPolicy<T extends Issue> implements Policy<T> {
     private final HashMap<Integer, T> issues;
 
-    public InMemoryPolicy() {
+    public static <T extends Issue> InMemoryPolicy<T> create() {
+        return new InMemoryPolicy<>();
+    }
+
+    private InMemoryPolicy() {
         this.issues = new HashMap<>();
     }
 

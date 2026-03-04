@@ -2,7 +2,7 @@ package tracker.issue;
 
 import java.util.Objects;
 
-public abstract class IssueView<T extends Issue> implements ReadableIssue {
+public abstract class IssueView<T extends Issue> implements ReadableIssue, Serializer {
     private final T issue;
 
     public IssueView(T issue) {
