@@ -15,6 +15,12 @@ class FileBackedTaskManagerTest {
     private final static Path path = Path.of("test_backup.csv");
     private TaskManager tm;
 
+    public static class BrokenFileException extends RuntimeException {
+        public BrokenFileException(String msg, Throwable cause) {
+            super(msg, cause);
+        }
+    }
+
     @BeforeEach
     void setUp() {
         reloadTaskManager();
@@ -27,7 +33,7 @@ class FileBackedTaskManagerTest {
                 Files.delete(path);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new BrokenFileException(e.getMessage(), e);
         }
     }
 
