@@ -2,11 +2,13 @@ package tracker.TaskManager;
 
 import tracker.issue.*;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TaskManager {
 
-    TaskView createTask(String title, String description, Status status);
+    TaskView createTask(String title, String description, Status status, LocalDateTime startTime, Duration duration);
 
     TaskView getTask(int id);
 
@@ -30,7 +32,7 @@ public interface TaskManager {
 
     void deleteAllEpics();
 
-    SubtaskView createSubtask(String title, String description, Status status, int epicId);
+    SubtaskView createSubtask(String title, String description, Status status, LocalDateTime startTime, Duration duration, int epicId);
 
     SubtaskView getSubtask(int id);
 
@@ -45,4 +47,8 @@ public interface TaskManager {
     List<SubtaskView> getEpicSubtasks(int epicId);
 
     List<ReadableIssue> getHistory();
+
+    List<ReadableIssue> getPrioritizedTasks();
+
+    List<ReadableIssue> getPrioritizedSubTasks();
 }

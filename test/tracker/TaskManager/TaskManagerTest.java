@@ -7,23 +7,22 @@ import org.junit.jupiter.api.Test;
 import tracker.Managers;
 import tracker.issue.*;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class TaskManagerTest {
+abstract class TaskManagerTest {
 
-    private TaskManager taskManager;
-
-    @BeforeEach
-    void setUp() {
-        taskManager = Managers.getDefault();
-    }
+    protected TaskManager taskManager;
+    protected final LocalDateTime defaultStartTime = LocalDateTime.parse("2007-12-03T10:15:30.");
+    protected final Duration defaultDuration = Duration.ofSeconds(10, 0);
 
     @Test
     void shouldCreateAndGetTask() {
-        TaskView task = taskManager.createTask("Задача 1", "Описание задачи 1", Status.NEW);
+        TaskView task = taskManager.createTask("Задача 1", "Описание задачи 1", Status.NEW, defaultStartTime, defaultDuration);
 
         assertNotNull(task);
         assertEquals("Задача 1", task.getTitle());
@@ -52,7 +51,7 @@ class TaskManagerTest {
     void shouldCreateAndGetSubtask() {
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
         SubtaskView subtask = taskManager.createSubtask("Подзадача 1", "Описание подзадачи",
-                Status.NEW, epic.getId());
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
 
         assertNotNull(subtask);
         assertEquals("Подзадача 1", subtask.getTitle());
@@ -65,10 +64,10 @@ class TaskManagerTest {
 
     @Test
     void shouldAddDifferentTaskTypesAndFindById() {
-        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW);
+        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW, defaultStartTime, defaultDuration);
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
         SubtaskView subtask = taskManager.createSubtask("Подзадача", "Описание",
-                Status.NEW, epic.getId());
+                Status.NEW, LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration, epic.getId());
 
         assertNotNull(taskManager.getTask(task.getId()));
         assertNotNull(taskManager.getEpic(epic.getId()));
@@ -81,8 +80,9 @@ class TaskManagerTest {
 
     @Test
     void shouldNotConflictBetweenGeneratedIds() {
-        TaskView task1 = taskManager.createTask("Задача 1", "Описание 1", Status.NEW);
-        TaskView task2 = taskManager.createTask("Задача 2", "Описание 2", Status.NEW);
+        TaskView task1 = taskManager.createTask("Задача 1", "Описание 1", Status.NEW, defaultStartTime, defaultDuration);
+        TaskView task2 = taskManager.createTask("Задача 2", "Описание 2", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration);
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
 
         assertNotEquals(task1.getId(), task2.getId());
@@ -99,7 +99,7 @@ class TaskManagerTest {
         String originalDescription = "Описание неизменной задачи";
         Status originalStatus = Status.NEW;
 
-        TaskView task = taskManager.createTask(originalTitle, originalDescription, originalStatus);
+        TaskView task = taskManager.createTask(originalTitle, originalDescription, originalStatus, defaultStartTime, defaultDuration);
         int taskId = task.getId();
 
         TaskView retrievedTask = taskManager.getTask(taskId);
@@ -112,10 +112,10 @@ class TaskManagerTest {
 
     @Test
     void shouldUpdateTask() {
-        TaskView task = taskManager.createTask("Старое название", "Старое описание", Status.NEW);
+        TaskView task = taskManager.createTask("Старое название", "Старое описание", Status.NEW, defaultStartTime, defaultDuration);
         int taskId = task.getId();
 
-        taskManager.updateTask(new Task("Новое название", "Новое описание", taskId, Status.IN_PROGRESS));
+        taskManager.updateTask(new Task("Новое название", "Новое описание", taskId, Status.IN_PROGRESS, defaultStartTime, defaultDuration));
 
         TaskView updatedTask = taskManager.getTask(taskId);
         assertEquals("Новое название", updatedTask.getTitle());
@@ -125,7 +125,7 @@ class TaskManagerTest {
 
     @Test
     void shouldDeleteTask() {
-        TaskView task = taskManager.createTask("Задача для удаления", "Описание", Status.NEW);
+        TaskView task = taskManager.createTask("Задача для удаления", "Описание", Status.NEW, defaultStartTime, defaultDuration);
         int taskId = task.getId();
 
         assertNotNull(taskManager.getTask(taskId));
@@ -137,8 +137,9 @@ class TaskManagerTest {
 
     @Test
     void shouldDeleteAllTasks() {
-        taskManager.createTask("Задача 1", "Описание 1", Status.NEW);
-        taskManager.createTask("Задача 2", "Описание 2", Status.NEW);
+        taskManager.createTask("Задача 1", "Описание 1", Status.NEW, defaultStartTime, defaultDuration);
+        taskManager.createTask("Задача 2", "Описание 2", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration);
 
         assertEquals(2, taskManager.getAllTasks().size());
 
@@ -151,9 +152,9 @@ class TaskManagerTest {
     void shouldGetEpicSubtasks() {
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
         SubtaskView subtask1 = taskManager.createSubtask("Подзадача 1", "Описание 1",
-                Status.NEW, epic.getId());
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
         SubtaskView subtask2 = taskManager.createSubtask("Подзадача 2", "Описание 2",
-                Status.NEW, epic.getId());
+                Status.NEW, LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration, epic.getId());
 
         List<SubtaskView> epicSubtasks = taskManager.getEpicSubtasks(epic.getId());
 
@@ -165,38 +166,50 @@ class TaskManagerTest {
     @Test
     void shouldReturnNullWhenCreatingSubtaskWithNonExistentEpic() {
         Assertions.assertThrows(IllegalArgumentException.class, () -> taskManager.createSubtask("Подзадача", "Описание",
-                Status.NEW, 999));
+                Status.NEW, defaultStartTime, defaultDuration, 999));
     }
 
     @Test
     void shouldUpdateEpicStatusWhenSubtasksChange() {
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
         SubtaskView subtask1 = taskManager.createSubtask("Подзадача 1", "Описание 1",
-                Status.NEW, epic.getId());
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
         SubtaskView subtask2 = taskManager.createSubtask("Подзадача 2", "Описание 2",
-                Status.NEW, epic.getId());
+                Status.NEW, LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration, epic.getId());
 
         assertEquals(Status.NEW, taskManager.getEpic(epic.getId()).getStatus());
 
         taskManager.updateSubtask(new Subtask("Подзадача 1", "Описание 1",
                 subtask1.getId(),
-                Status.IN_PROGRESS, epic.getId()));
+                Status.IN_PROGRESS,
+                defaultStartTime,
+                defaultDuration,
+                epic.getId()));
 
         assertEquals(Status.IN_PROGRESS, taskManager.getEpic(epic.getId()).getStatus());
 
         taskManager.updateSubtask(new Subtask("Подзадача 1", "Описание 1",
                 subtask1.getId(),
-                Status.DONE, epic.getId()));
+                Status.DONE,
+                defaultStartTime,
+                defaultDuration,
+                epic.getId()));
+
+        assertEquals(Status.IN_PROGRESS, taskManager.getEpic(epic.getId()).getStatus());
+
         taskManager.updateSubtask(new Subtask("Подзадача 1", "Описание 1",
                 subtask2.getId(),
-                Status.DONE, epic.getId()));
+                Status.DONE,
+                LocalDateTime.parse("2007-12-03T10:15:40."),
+                defaultDuration,
+                epic.getId()));
 
         assertEquals(Status.DONE, taskManager.getEpic(epic.getId()).getStatus());
     }
 
     @Test
     void shouldAddTasksToHistory() {
-        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW);
+        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW, defaultStartTime, defaultDuration);
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
 
         TaskView r1 = taskManager.getTask(task.getId());
@@ -211,7 +224,7 @@ class TaskManagerTest {
 
     @Test
     void shouldRemoveTasksFromHistory() {
-        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW);
+        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW, defaultStartTime, defaultDuration);
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
 
         taskManager.getTask(task.getId());
@@ -234,7 +247,7 @@ class TaskManagerTest {
     @Test
     void shouldLimitHistoryTo10Elements() {
         for (int i = 0; i < 15; i++) {
-            TaskView task = taskManager.createTask("Задача " + i, "Описание", Status.NEW);
+            TaskView task = taskManager.createTask("Задача " + i, "Описание", Status.NEW, defaultStartTime, defaultDuration);
             taskManager.getTask(task.getId());
         }
 
@@ -247,9 +260,9 @@ class TaskManagerTest {
     void shouldDeleteEpicWithSubtasks() {
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
         SubtaskView subtask1 = taskManager.createSubtask("Подзадача 1", "Описание",
-                Status.NEW, epic.getId());
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
         SubtaskView subtask2 = taskManager.createSubtask("Подзадача 2", "Описание",
-                Status.NEW, epic.getId());
+                Status.NEW, LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration, epic.getId());
 
         taskManager.deleteEpic(epic.getId());
 
@@ -262,7 +275,7 @@ class TaskManagerTest {
     void shouldDeleteSubtask() {
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
         SubtaskView subtask = taskManager.createSubtask("Подзадача", "Описание",
-                Status.NEW, epic.getId());
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
 
         assertEquals(1, taskManager.getEpicSubtasks(epic.getId()).size());
 
@@ -276,8 +289,8 @@ class TaskManagerTest {
     @Test
     void shouldDeleteAllSubtasks() {
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
-        taskManager.createSubtask("Подзадача 1", "Описание", Status.DONE, epic.getId());
-        taskManager.createSubtask("Подзадача 2", "Описание", Status.DONE, epic.getId());
+        taskManager.createSubtask("Подзадача 1", "Описание", Status.DONE, defaultStartTime, defaultDuration, epic.getId());
+        taskManager.createSubtask("Подзадача 2", "Описание", Status.DONE, LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration, epic.getId());
 
         assertEquals(Status.DONE, taskManager.getEpic(epic.getId()).getStatus());
 
@@ -286,5 +299,76 @@ class TaskManagerTest {
         assertEquals(0, taskManager.getAllSubtasks().size());
         assertEquals(0, taskManager.getEpicSubtasks(epic.getId()).size());
         assertEquals(Status.NEW, taskManager.getEpic(epic.getId()).getStatus());
+    }
+
+    @Test
+    void shouldUpdateEpicTime() {
+        EpicView epic = taskManager.createEpic("Эпик", "Описание");
+        SubtaskView sb1 = taskManager.createSubtask("Подзадача 1", "Описание", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:30."), Duration.ofSeconds(10, 0), epic.getId());
+
+        assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:30."));
+        assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:40."));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(10, 0));
+
+        SubtaskView sb2 = taskManager.createSubtask("Подзадача 2", "Описание", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:40."), Duration.ofSeconds(10, 0), epic.getId());
+
+        assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:30."));
+        assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:50."));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(20, 0));
+
+        SubtaskView sb3 = taskManager.createSubtask("Подзадача 3", "Описание", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:15."), Duration.ofSeconds(10, 0), epic.getId());
+
+        assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:15."));
+        assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:50."));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(35, 0));
+
+        taskManager.deleteSubtask(sb1.getId());
+
+        assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:15."));
+        assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:50."));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(35, 0));
+
+        taskManager.deleteSubtask(sb2.getId());
+
+        assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:15."));
+        assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:25."));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(10, 0));
+
+        taskManager.deleteSubtask(sb3.getId());
+
+        assertTrue(epic.getStartTime().isEmpty());
+        assertTrue(epic.getEndTime().isEmpty());
+        assertTrue(epic.getDuration().isEmpty());
+    }
+
+    @Test
+    void shouldConflictCreateTaskAndSubtask() {
+        EpicView epic = taskManager.createEpic("Эпик", "Описание");
+        taskManager.createSubtask("Подзадача 1", "Описание 1",
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
+        assertThrows(ConflictIssueTimeException.class, () -> taskManager.createTask("Подзадача 2", "Описание 2",
+                Status.NEW, defaultStartTime, defaultDuration));
+    }
+
+    @Test
+    void shouldConflictUpdateTaskAndSubtask() {
+        EpicView epic = taskManager.createEpic("Эпик", "Описание");
+        SubtaskView subtask = taskManager.createSubtask("Подзадача 1", "Описание 1",
+                Status.NEW, defaultStartTime, defaultDuration, epic.getId());
+        TaskView task = taskManager.createTask("Задача 1", "Описание 2",
+                Status.NEW, LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration);
+
+        assertThrows(ConflictIssueTimeException.class, () -> taskManager.updateTask(new Task("Новое название", "Новое описание",
+                task.getId(), Status.IN_PROGRESS,  defaultStartTime, defaultDuration)));
+
+        assertThrows(ConflictIssueTimeException.class, () -> taskManager.updateSubtask(new Subtask("Подзадача 1", "Описание 1",
+                subtask.getId(),
+                Status.DONE,
+                defaultStartTime,
+                Duration.ofSeconds(11, 0),
+                epic.getId())));
     }
 }

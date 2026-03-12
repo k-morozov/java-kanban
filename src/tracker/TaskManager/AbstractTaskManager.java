@@ -7,8 +7,11 @@ import tracker.IssueRepo.*;
 import tracker.Managers;
 import tracker.issue.*;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 abstract class AbstractTaskManager implements TaskManager {
     private final HistoryManager historyManager;
@@ -16,15 +19,15 @@ abstract class AbstractTaskManager implements TaskManager {
     private final RepoManager repoManager;
     private int nextId;
 
-    public AbstractTaskManager(PolicyFactory factory) {
+    public AbstractTaskManager(PolicyFactory taskFactory, PolicyFactory epicFactory, PolicyFactory subtaskFactory) {
         historyManager = Managers.getDefaultHistory();
 
         listener = new HistoryEventListener(historyManager);
         Register register = new RepoRegister();
 
-        register.register(Task.class, new TaskRepo(listener, factory.create()));
-        register.register(Epic.class, new EpicRepo(listener, factory.create()));
-        register.register(Subtask.class, new SubtaskRepo(listener, factory.create()));
+        register.register(Task.class, new TaskRepo(listener, taskFactory.create()));
+        register.register(Epic.class, new EpicRepo(listener, epicFactory.create()));
+        register.register(Subtask.class, new SubtaskRepo(listener, subtaskFactory.create()));
 
         this.repoManager = new RepoManager(register);
         this.nextId = 1;
@@ -34,21 +37,49 @@ abstract class AbstractTaskManager implements TaskManager {
         return nextId++;
     }
 
+    private static boolean isConflictTime(ReadableIssue lhs, ReadableIssue rhs) {
+        if (lhs.getId() == rhs.getId()) {
+            return false;
+        }
+        LocalDateTime lhsStart = lhs.getStartTime().orElseThrow();
+        LocalDateTime lhsEnd = lhs.getEndTime().orElseThrow();
+        LocalDateTime rhsStart = rhs.getStartTime().orElseThrow();
+        LocalDateTime rhsEnd = rhs.getEndTime().orElseThrow();
+
+        return lhsStart.isBefore(rhsEnd) && rhsStart.isBefore(lhsEnd);
+    }
+
+    private void validate(ReadableIssue issue) {
+        List<ReadableIssue> tasks = getPrioritizedTasks();
+        validate(issue, tasks);
+        List<ReadableIssue> subtasks = getPrioritizedSubTasks();
+        validate(issue, subtasks);
+    }
+
+    private void validate(ReadableIssue issue, List<ReadableIssue> issues) {
+        boolean r = issues.stream().anyMatch(candidate -> isConflictTime(issue, candidate));
+        if (r) {
+            throw new ConflictIssueTimeException("");
+        }
+    }
+
     protected void updateNextId(int candidate) {
         this.nextId = Integer.max(nextId, candidate);
     }
 
     @Override
-    public TaskView createTask(String title, String description, Status status) {
-        return createTask(generateId(), title, description, status);
+    public TaskView createTask(String title, String description, Status status, LocalDateTime startTime, Duration duration) {
+        return createTask(generateId(), title, description, status, startTime, duration);
     }
 
-    protected TaskView createTask(int id, String title, String description, Status status) {
-        Task task = new Task(title, description, id, status);
+    protected TaskView createTask(int id, String title, String description, Status status, LocalDateTime startTime, Duration duration) {
+        Task task = new Task(title, description, id, status, startTime, duration);
+        validate(task);
         return save(task);
     }
 
     protected TaskView save(Task task) {
+        validate(task);
         repoManager.save(Task.class, task);
         return new TaskView(task);
     }
@@ -69,6 +100,7 @@ abstract class AbstractTaskManager implements TaskManager {
 
     @Override
     public void updateTask(Task task) {
+        validate(task);
         repoManager.update(Task.class, task);
     }
 
@@ -135,12 +167,15 @@ abstract class AbstractTaskManager implements TaskManager {
     }
 
     @Override
-    public SubtaskView createSubtask(String title, String description, Status status, int epicId) {
-        return createSubtask(generateId(), title, description, status, epicId);
+    public SubtaskView createSubtask(String title, String description, Status status,
+                                     LocalDateTime startTime, Duration duration, int epicId) {
+        return createSubtask(generateId(), title, description, status, startTime, duration, epicId);
     }
 
-    protected SubtaskView createSubtask(int id, String title, String description, Status status, int epicId) {
-        Subtask subtask = new Subtask(title, description, id, status, epicId);
+    protected SubtaskView createSubtask(int id, String title, String description, Status status,
+                                        LocalDateTime startTime, Duration duration, int epicId) {
+        Subtask subtask = new Subtask(title, description, id, status, startTime, duration, epicId);
+        validate(subtask);
         return save(subtask);
     }
 
@@ -150,10 +185,13 @@ abstract class AbstractTaskManager implements TaskManager {
             throw new IllegalArgumentException("Not found parent epic");
         }
 
-        repoManager.save(Subtask.class, subtask);
+        validate(subtask);
 
+        repoManager.save(Subtask.class, subtask);
         epic.addSubtaskId(subtask.getId());
         updateEpicStatus(subtask.getEpicId());
+
+        updateEpicTime(epic);
 
         return new SubtaskView(subtask);
     }
@@ -174,8 +212,12 @@ abstract class AbstractTaskManager implements TaskManager {
 
     @Override
     public void updateSubtask(Subtask subtask) {
+        validate(subtask);
         repoManager.update(Subtask.class, subtask);
         updateEpicStatus(subtask.getEpicId());
+
+        Epic epic = repoManager.get(Epic.class, subtask.getEpicId());
+        updateEpicTime(epic);
     }
 
     @Override
@@ -186,6 +228,8 @@ abstract class AbstractTaskManager implements TaskManager {
         epic.removeSubtaskId(subtaskId);
 
         repoManager.remove(Subtask.class, subtaskId);
+
+        updateEpicTime(epic);
     }
 
     @Override
@@ -194,6 +238,7 @@ abstract class AbstractTaskManager implements TaskManager {
         repoManager.getAll(Epic.class).forEach(epic -> {
             epic.clearSubtasks();
             epic.setStatus(Status.NEW);
+            updateEpicTime(epic);
         });
     }
 
@@ -204,19 +249,26 @@ abstract class AbstractTaskManager implements TaskManager {
             return List.of();
         }
 
-        ArrayList<SubtaskView> epicSubtasks = new ArrayList<>();
-        for (int subtaskId : epic.getSubtaskIds()) {
-            Subtask subtask = repoManager.get(Subtask.class, subtaskId);
-            if (subtask != null) {
-                epicSubtasks.add(new SubtaskView(subtask));
-            }
-        }
-        return epicSubtasks;
+        return epic.getSubtaskIds().stream()
+                .map(subtaskId -> repoManager.get(Subtask.class, subtaskId))
+                .filter(Objects::nonNull)
+                .map(SubtaskView::new)
+                .toList();
     }
 
     @Override
     public List<ReadableIssue> getHistory() {
         return historyManager.getHistory();
+    }
+
+    @Override
+    public List<ReadableIssue> getPrioritizedTasks() {
+        return getAllTasks().stream().map(task -> (ReadableIssue)task).toList();
+    }
+
+    @Override
+    public List<ReadableIssue> getPrioritizedSubTasks() {
+        return getAllSubtasks().stream().map(subtask -> (ReadableIssue)subtask).toList();
     }
 
     private void updateEpicStatus(int epicId) {
@@ -255,5 +307,31 @@ abstract class AbstractTaskManager implements TaskManager {
         } else {
             epic.setStatus(Status.IN_PROGRESS);
         }
+    }
+
+    void updateEpicTime(Epic epic) {
+        List<SubtaskView> sbs = getEpicSubtasks(epic.getId());
+        if (sbs.isEmpty()) {
+            epic.resetTime();
+            return;
+        }
+
+        SubtaskView sb = sbs.getFirst();
+        LocalDateTime start = sb.getStartTime().orElseThrow();
+        LocalDateTime end = sb.getEndTime().orElseThrow();
+
+        for (int i = 1; i < sbs.size(); i++) {
+            LocalDateTime candidateStart = sbs.get(i).getStartTime().orElseThrow();
+            if (candidateStart.isBefore(start)) {
+                start = candidateStart;
+            }
+
+            LocalDateTime candidateEnd = sbs.get(i).getEndTime().orElseThrow();
+            if (candidateEnd.isAfter(end)) {
+                end = candidateEnd;
+            }
+        }
+
+        epic.updateTime(start, end);
     }
 }

@@ -8,12 +8,13 @@ import tracker.issue.*;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FileBackedTaskManagerTest {
+class FileBackedTaskManagerTest extends TaskManagerTest {
     private final static Path path = Path.of("test_backup.csv");
-    private TaskManager tm;
 
     public static class BrokenFileException extends RuntimeException {
         public BrokenFileException(String msg, Throwable cause) {
@@ -38,14 +39,14 @@ class FileBackedTaskManagerTest {
     }
 
     void reloadTaskManager() {
-        this.tm = new FileBackedTaskManager(path);
+        this.taskManager = new FileBackedTaskManager(path);
     }
 
     @Test
     void emptyManager() {
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 """,
                 text);
 
@@ -53,22 +54,23 @@ class FileBackedTaskManagerTest {
 
         text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 """,
                 text);
     }
 
     @Test
     void createOneTask() {
-        tm.createTask("task1", "description1", Status.NEW);
+        taskManager.createTask("task1", "description1", Status.NEW,
+                defaultStartTime, defaultDuration);
 
-        TaskView task1 = tm.getTask(1);
+        TaskView task1 = taskManager.getTask(1);
         assertEquals("task1", task1.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,TASK,task1,NEW,description1
+                id,type,name,status,description,start_ts,duration,epic
+                1,TASK,task1,NEW,description1,2007-12-03T10:15:30,PT10S
                 """,
                 text);
 
@@ -77,30 +79,31 @@ class FileBackedTaskManagerTest {
 
         text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,TASK,task1,NEW,description1
+                id,type,name,status,description,start_ts,duration,epic
+                1,TASK,task1,NEW,description1,2007-12-03T10:15:30,PT10S
                 """,
                 text);
     }
 
     @Test
     void createOneTaskAfterReload() {
-        tm.createTask("task1", "description1", Status.NEW);
+        taskManager.createTask("task1", "description1", Status.NEW, defaultStartTime, defaultDuration);
 
-        TaskView task1 = tm.getTask(1);
+        TaskView task1 = taskManager.getTask(1);
         assertEquals("task1", task1.getTitle());
 
         reloadTaskManager();
         assertEquals("task1", task1.getTitle());
 
-        tm.createTask("task2", "description2", Status.DONE);
-        TaskView task2 = tm.getTask(2);
+        taskManager.createTask("task2", "description2", Status.DONE,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration);
+        TaskView task2 = taskManager.getTask(2);
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,TASK,task1,NEW,description1
-                2,TASK,task2,DONE,description2
+                id,type,name,status,description,start_ts,duration,epic
+                1,TASK,task1,NEW,description1,2007-12-03T10:15:30,PT10S
+                2,TASK,task2,DONE,description2,2007-12-03T10:15:40,PT10S
                 """,
                 text);
 
@@ -111,103 +114,114 @@ class FileBackedTaskManagerTest {
 
     @Test
     void updateTaskBeforeReload() {
-        tm.createTask("task1", "description1", Status.NEW);
+        taskManager.createTask("task1", "description1", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:30."), defaultDuration);
 
-        TaskView task1 = tm.getTask(1);
+        TaskView task1 = taskManager.getTask(1);
 
-        Task task1Updated = new Task("task1Updated", "description1", task1.getId(), Status.NEW);
+        Task task1Updated = new Task("task1Updated", "description1", task1.getId(), Status.NEW,
+                defaultStartTime, Duration.ofSeconds(30, 0));
 
-        tm.updateTask(task1Updated);
+        taskManager.updateTask(task1Updated);
 
         reloadTaskManager();
-        assertEquals("task1Updated", task1Updated.getTitle());
+
+        task1 = taskManager.getTask(1);
+        assertEquals("task1Updated", task1.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,TASK,task1Updated,NEW,description1
+                id,type,name,status,description,start_ts,duration,epic
+                1,TASK,task1Updated,NEW,description1,2007-12-03T10:15:30,PT30S
                 """,
                 text);
+
+        assertEquals(defaultStartTime, task1.getStartTime().orElseThrow());
+        assertEquals(Duration.ofSeconds(30, 0), task1.getDuration().orElseThrow());
     }
 
     @Test
     void updateTaskAfterReload() {
-        tm.createTask("task1", "description1", Status.NEW);
+        taskManager.createTask("task1", "description1", Status.NEW,
+                defaultStartTime, defaultDuration);
 
-        TaskView task1 = tm.getTask(1);
+        TaskView task1 = taskManager.getTask(1);
 
         reloadTaskManager();
 
-        Task task1Updated = new Task("task1Updated", "description1", task1.getId(), Status.NEW);
-        tm.updateTask(task1Updated);
+        Task task1Updated = new Task("task1Updated", "description1", task1.getId(), Status.NEW,
+                defaultStartTime, defaultDuration);
+        taskManager.updateTask(task1Updated);
 
         assertEquals("task1Updated", task1Updated.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,TASK,task1Updated,NEW,description1
+                id,type,name,status,description,start_ts,duration,epic
+                1,TASK,task1Updated,NEW,description1,2007-12-03T10:15:30,PT10S
                 """,
                 text);
     }
 
     @Test
     void deleteTaskAfterReload() {
-        tm.createTask("task1", "description1", Status.NEW);
-        tm.createTask("task2", "description2", Status.IN_PROGRESS);
+        taskManager.createTask("task1", "description1", Status.NEW, defaultStartTime, defaultDuration);
+        taskManager.createTask("task2", "description2", Status.IN_PROGRESS,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration);
 
-        TaskView task1 = tm.getTask(1);
+        TaskView task1 = taskManager.getTask(1);
 
         reloadTaskManager();
 
-        tm.deleteTask(task1.getId());
+        taskManager.deleteTask(task1.getId());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                2,TASK,task2,IN_PROGRESS,description2
+                id,type,name,status,description,start_ts,duration,epic
+                2,TASK,task2,IN_PROGRESS,description2,2007-12-03T10:15:40,PT10S
                 """,
                 text);
     }
 
     @Test
     void deleteAllTaskAfterReload() {
-        tm.createTask("task1", "description1", Status.NEW);
-        tm.createTask("task2", "description2", Status.IN_PROGRESS);
+        taskManager.createTask("task1", "description1", Status.NEW, defaultStartTime, defaultDuration);
+        taskManager.createTask("task2", "description2", Status.IN_PROGRESS,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration);
 
         reloadTaskManager();
 
-        tm.deleteAllTasks();
+        taskManager.deleteAllTasks();
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 """,
                 text);
     }
 
     @Test
     void createOneEpic() {
-        tm.createEpic("epic1", "description1");
+        taskManager.createEpic("epic1", "description1");
 
-        EpicView epic1 = tm.getEpic(1);
+        EpicView epic1 = taskManager.getEpic(1);
         assertEquals("epic1", epic1.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 1,EPIC,epic1,NEW,description1
                 """,
                 text);
 
         reloadTaskManager();
 
-        epic1 = tm.getEpic(1);
+        epic1 = taskManager.getEpic(1);
         assertEquals("epic1", epic1.getTitle());
 
         text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 1,EPIC,epic1,NEW,description1
                 """,
                 text);
@@ -215,22 +229,22 @@ class FileBackedTaskManagerTest {
 
     @Test
     void createOneEpicAfterReload() {
-        tm.createEpic("epic1", "description1");
+        taskManager.createEpic("epic1", "description1");
 
-        EpicView epic1 = tm.getEpic(1);
+        EpicView epic1 = taskManager.getEpic(1);
         assertEquals("epic1", epic1.getTitle());
 
         reloadTaskManager();
 
-        epic1 = tm.getEpic(1);
+        epic1 = taskManager.getEpic(1);
         assertEquals("epic1", epic1.getTitle());
 
-        tm.createEpic("epic2", "description2");
-        EpicView epic2 = tm.getEpic(2);
+        taskManager.createEpic("epic2", "description2");
+        EpicView epic2 = taskManager.getEpic(2);
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 1,EPIC,epic1,NEW,description1
                 2,EPIC,epic2,NEW,description2
                 """,
@@ -243,21 +257,21 @@ class FileBackedTaskManagerTest {
 
     @Test
     void updateEpicBeforeReload() {
-        tm.createEpic("epic1", "description1");
+        taskManager.createEpic("epic1", "description1");
 
-        EpicView epic1 = tm.getEpic(1);
+        EpicView epic1 = taskManager.getEpic(1);
 
         Epic updated = new Epic("epicUpdated", "description2", epic1.getId());
-        tm.updateEpic(updated);
+        taskManager.updateEpic(updated);
 
         reloadTaskManager();
 
-        EpicView updatedView = tm.getEpic(1);
+        EpicView updatedView = taskManager.getEpic(1);
         assertEquals("epicUpdated", updatedView.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 1,EPIC,epicUpdated,NEW,description2
                 """,
                 text);
@@ -265,20 +279,20 @@ class FileBackedTaskManagerTest {
 
     @Test
     void updateEpicAfterReload() {
-        tm.createEpic("epic1", "description1");
+        taskManager.createEpic("epic1", "description1");
 
-        EpicView epic1 = tm.getEpic(1);
+        EpicView epic1 = taskManager.getEpic(1);
 
         reloadTaskManager();
 
         Epic updated = new Epic("epicUpdated", "description2", epic1.getId());
-        tm.updateEpic(updated);
+        taskManager.updateEpic(updated);
 
         assertEquals("epicUpdated", updated.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 1,EPIC,epicUpdated,NEW,description2
                 """,
                 text);
@@ -286,18 +300,18 @@ class FileBackedTaskManagerTest {
 
     @Test
     void deleteEpicAfterReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createEpic("epic2", "description2");
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createEpic("epic2", "description2");
 
-        EpicView epic1 = tm.getEpic(1);
+        EpicView epic1 = taskManager.getEpic(1);
 
         reloadTaskManager();
 
-        tm.deleteEpic(epic1.getId());
+        taskManager.deleteEpic(epic1.getId());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 2,EPIC,epic2,NEW,description2
                 """,
                 text);
@@ -305,72 +319,77 @@ class FileBackedTaskManagerTest {
 
     @Test
     void deleteAllEpicAfterReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createEpic("epic2", "description2");
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createEpic("epic2", "description2");
 
         reloadTaskManager();
 
-        tm.deleteAllEpics();
+        taskManager.deleteAllEpics();
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
+                id,type,name,status,description,start_ts,duration,epic
                 """,
                 text);
     }
 
     @Test
     void createOneSubtask() {
-        tm.createEpic("epic1", "description1");
-        tm.createSubtask("subtask1", "description1", Status.NEW, 1);
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createSubtask("subtask1", "description1", Status.NEW, defaultStartTime, defaultDuration, 1);
 
-        SubtaskView subtask1 = tm.getSubtask(2);
+        SubtaskView subtask1 = taskManager.getSubtask(2);
         assertEquals("subtask1", subtask1.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,EPIC,epic1,NEW,description1
-                2,SUBTASK,subtask1,NEW,description1,1
+                id,type,name,status,description,start_ts,duration,epic
+                1,EPIC,epic1,NEW,description1,2007-12-03T10:15:30,PT10S
+                2,SUBTASK,subtask1,NEW,description1,2007-12-03T10:15:30,PT10S,1
                 """,
                 text);
 
         reloadTaskManager();
 
-        subtask1 = tm.getSubtask(2);
+        EpicView epic = taskManager.getEpic(1);
+
+        assertEquals(defaultStartTime, epic.getStartTime().orElseThrow());
+
+        subtask1 = taskManager.getSubtask(2);
         assertEquals("subtask1", subtask1.getTitle());
 
         text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,EPIC,epic1,NEW,description1
-                2,SUBTASK,subtask1,NEW,description1,1
+                id,type,name,status,description,start_ts,duration,epic
+                1,EPIC,epic1,NEW,description1,2007-12-03T10:15:30,PT10S
+                2,SUBTASK,subtask1,NEW,description1,2007-12-03T10:15:30,PT10S,1
                 """,
                 text);
     }
 
     @Test
     void createOneSubtaskAfterReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createSubtask("subtask1", "description1", Status.NEW, 1);
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createSubtask("subtask1", "description1", Status.NEW, defaultStartTime, defaultDuration,1);
 
-        SubtaskView subtask1 = tm.getSubtask(2);
+        SubtaskView subtask1 = taskManager.getSubtask(2);
         assertEquals("subtask1", subtask1.getTitle());
 
         reloadTaskManager();
 
-        subtask1 = tm.getSubtask(2);
+        subtask1 = taskManager.getSubtask(2);
         assertEquals("subtask1", subtask1.getTitle());
 
-        tm.createSubtask("subtask2", "description2", Status.NEW, 1);
-        SubtaskView subtask2 = tm.getSubtask(3);
+        taskManager.createSubtask("subtask2", "description2", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration,1);
+        SubtaskView subtask2 = taskManager.getSubtask(3);
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,EPIC,epic1,NEW,description1
-                2,SUBTASK,subtask1,NEW,description1,1
-                3,SUBTASK,subtask2,NEW,description2,1
+                id,type,name,status,description,start_ts,duration,epic
+                1,EPIC,epic1,NEW,description1,2007-12-03T10:15:30,PT20S
+                2,SUBTASK,subtask1,NEW,description1,2007-12-03T10:15:30,PT10S,1
+                3,SUBTASK,subtask2,NEW,description2,2007-12-03T10:15:40,PT10S,1
                 """,
                 text);
 
@@ -381,90 +400,97 @@ class FileBackedTaskManagerTest {
 
     @Test
     void updateSubtaskBeforeReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createSubtask("subtask1", "description1", Status.NEW, 1);
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createSubtask("subtask1", "description1", Status.NEW, defaultStartTime, defaultDuration,1);
 
-        SubtaskView subtask1 = tm.getSubtask(2);
+        SubtaskView subtask1 = taskManager.getSubtask(2);
 
-        Subtask updated = new Subtask("subtaskUpdated", "description2", subtask1.getId(), Status.IN_PROGRESS, 1);
-        tm.updateSubtask(updated);
+        Subtask updated = new Subtask("subtaskUpdated", "description2", subtask1.getId(), Status.IN_PROGRESS,
+                LocalDateTime.parse("2008-12-03T10:15:30."), Duration.ofSeconds(20, 0),1);
+        taskManager.updateSubtask(updated);
 
         reloadTaskManager();
 
-        SubtaskView updatedSubtask = tm.getSubtask(2);
+        SubtaskView updatedSubtask = taskManager.getSubtask(2);
         assertEquals("subtaskUpdated", updatedSubtask.getTitle());
+        assertEquals(LocalDateTime.parse("2008-12-03T10:15:30."), updatedSubtask.getStartTime().orElseThrow());
+        assertEquals(Duration.ofSeconds(20, 0), updatedSubtask.getDuration().orElseThrow());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,EPIC,epic1,IN_PROGRESS,description1
-                2,SUBTASK,subtaskUpdated,IN_PROGRESS,description2,1
+                id,type,name,status,description,start_ts,duration,epic
+                1,EPIC,epic1,IN_PROGRESS,description1,2008-12-03T10:15:30,PT20S
+                2,SUBTASK,subtaskUpdated,IN_PROGRESS,description2,2008-12-03T10:15:30,PT20S,1
                 """,
                 text);
     }
 
     @Test
     void updateSubtaskAfterReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createSubtask("subtask1", "description1", Status.NEW, 1);
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createSubtask("subtask1", "description1", Status.NEW, defaultStartTime, defaultDuration,1);
 
         reloadTaskManager();
 
-        SubtaskView subtask1 = tm.getSubtask(2);
+        SubtaskView subtask1 = taskManager.getSubtask(2);
 
-        Subtask updated = new Subtask("subtaskUpdated", "description2", subtask1.getId(), Status.IN_PROGRESS, 1);
-        tm.updateSubtask(updated);
+        Subtask updated = new Subtask("subtaskUpdated", "description2", subtask1.getId(), Status.IN_PROGRESS,
+                defaultStartTime, Duration.ofSeconds(20, 0),1);
+        taskManager.updateSubtask(updated);
 
-        SubtaskView updatedSubtask = tm.getSubtask(2);
+        SubtaskView updatedSubtask = taskManager.getSubtask(2);
         assertEquals("subtaskUpdated", updatedSubtask.getTitle());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,EPIC,epic1,IN_PROGRESS,description1
-                2,SUBTASK,subtaskUpdated,IN_PROGRESS,description2,1
+                id,type,name,status,description,start_ts,duration,epic
+                1,EPIC,epic1,IN_PROGRESS,description1,2007-12-03T10:15:30,PT20S
+                2,SUBTASK,subtaskUpdated,IN_PROGRESS,description2,2007-12-03T10:15:30,PT20S,1
                 """,
                 text);
     }
 
     @Test
     void deleteSubtaskAfterReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createSubtask("subtask1", "description1", Status.NEW, 1);
-        tm.createSubtask("subtask2", "description2", Status.NEW, 1);
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createSubtask("subtask1", "description1", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:30."), defaultDuration,1);
+        taskManager.createSubtask("subtask2", "description2", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration,1);
 
         reloadTaskManager();
 
-        SubtaskView subtask1 = tm.getSubtask(2);
+        SubtaskView subtask1 = taskManager.getSubtask(2);
 
-        tm.deleteSubtask(subtask1.getId());
+        taskManager.deleteSubtask(subtask1.getId());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                id,type,name,status,description,epic
-                1,EPIC,epic1,NEW,description1
-                3,SUBTASK,subtask2,NEW,description2,1
+                id,type,name,status,description,start_ts,duration,epic
+                1,EPIC,epic1,NEW,description1,2007-12-03T10:15:40,PT10S
+                3,SUBTASK,subtask2,NEW,description2,2007-12-03T10:15:40,PT10S,1
                 """,
                 text);
     }
 
     @Test
     void deleteAllSubtaskAfterReload() {
-        tm.createEpic("epic1", "description1");
-        tm.createSubtask("subtask1", "description1", Status.NEW, 1);
-        tm.createSubtask("subtask2", "description2", Status.NEW, 1);
+        taskManager.createEpic("epic1", "description1");
+        taskManager.createSubtask("subtask1", "description1", Status.NEW, defaultStartTime, defaultDuration,1);
+        taskManager.createSubtask("subtask2", "description2", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:40."), defaultDuration,1);
 
         reloadTaskManager();
 
-        SubtaskView subtask1 = tm.getSubtask(2);
+        SubtaskView subtask1 = taskManager.getSubtask(2);
 
-        tm.deleteSubtask(subtask1.getId());
+        taskManager.deleteSubtask(subtask1.getId());
 
         String text = assertDoesNotThrow(() -> Files.readString(path));
         assertEquals("""
-                        id,type,name,status,description,epic
-                        1,EPIC,epic1,NEW,description1
-                        3,SUBTASK,subtask2,NEW,description2,1
+                        id,type,name,status,description,start_ts,duration,epic
+                        1,EPIC,epic1,NEW,description1,2007-12-03T10:15:40,PT10S
+                        3,SUBTASK,subtask2,NEW,description2,2007-12-03T10:15:40,PT10S,1
                         """,
                 text);
     }

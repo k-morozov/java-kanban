@@ -1,6 +1,9 @@
 package tracker.issue;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.Optional;
 
 public abstract class IssueView<T extends Issue> implements ReadableIssue, Serializer {
     private final T issue;
@@ -31,6 +34,21 @@ public abstract class IssueView<T extends Issue> implements ReadableIssue, Seria
     @Override
     public Status getStatus() {
         return issue.getStatus();
+    }
+
+    @Override
+    public Optional<LocalDateTime> getStartTime() {
+        return issue.getStartTime();
+    }
+
+    @Override
+    public Optional<Duration> getDuration() {
+        return issue.getDuration();
+    }
+
+    @Override
+    public Optional<LocalDateTime> getEndTime() {
+        return issue.getEndTime();
     }
 
     @Override
