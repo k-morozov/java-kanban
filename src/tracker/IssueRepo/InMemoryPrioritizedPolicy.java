@@ -17,8 +17,7 @@ public final class InMemoryPrioritizedPolicy<T extends Issue> implements Policy<
     private InMemoryPrioritizedPolicy() {
         this.issues = new HashMap<>();
         this.prioritizedIssues = new TreeSet<>((lhs, rhs) -> {
-            // @todo
-            if  (lhs.getStartTime().get().isBefore(rhs.getStartTime().get())) {
+            if  (lhs.getStartTime().orElseThrow().isBefore(rhs.getStartTime().orElseThrow())) {
                 return -1;
             }
 
