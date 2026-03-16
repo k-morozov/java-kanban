@@ -6,6 +6,11 @@ import tracker.issue.Status;
 import tracker.issue.Subtask;
 import tracker.issue.Task;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class TaskTest {
@@ -25,6 +30,21 @@ class TaskTest {
         Task task2 = new Task("Задача 1", "Описание 1", 2, Status.NEW);
 
         assertNotEquals(task1, task2);
+    }
+
+    @Test
+    void taskWithoutTime() {
+        Task task1 = new Task("Задача 1", "Описание 1", 1, Status.NEW);
+
+        assertEquals(Optional.empty(), task1.getEndTime());
+    }
+
+    @Test
+    void shouldHaveEndTime() {
+        Task task1 = new Task("Задача 1", "Описание 1", 1, Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:30."), Duration.ofSeconds(10, 0));
+
+        assertEquals(LocalDateTime.parse("2007-12-03T10:15:40."), task1.getEndTime().get());
     }
 
     @Test

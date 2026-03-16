@@ -1,12 +1,15 @@
 package tracker.TaskManager;
 
 import tracker.IssueRepo.InMemoryPolicy;
+import tracker.IssueRepo.InMemoryPrioritizedPolicy;
 import tracker.issue.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +17,7 @@ public class FileBackedTaskManager extends AbstractTaskManager {
     private final Path path;
     private final Formatter formatter;
 
-    private static final String schema = "id,type,name,status,description,epic";
+    private static final String schema = "id,type,name,status,description,start_ts,duration,epic";
 
     private class Loader {
         void load(String line) {
@@ -43,7 +46,7 @@ public class FileBackedTaskManager extends AbstractTaskManager {
     }
 
     public FileBackedTaskManager(Path path) {
-        super(InMemoryPolicy::create);
+        super(InMemoryPrioritizedPolicy::create, InMemoryPolicy::create, InMemoryPrioritizedPolicy::create);
         this.path = path;
         this.formatter = new CSVFormatter();
 
@@ -99,8 +102,8 @@ public class FileBackedTaskManager extends AbstractTaskManager {
     }
 
     @Override
-    public TaskView createTask(String title, String description, Status status) {
-        TaskView res = super.createTask(title, description, status);
+    public TaskView createTask(String title, String description, Status status, LocalDateTime startTime, Duration duration) {
+        TaskView res = super.createTask(title, description, status, startTime, duration);
         dump();
         return res;
     }
@@ -149,8 +152,8 @@ public class FileBackedTaskManager extends AbstractTaskManager {
     }
 
     @Override
-    public SubtaskView createSubtask(String title, String description, Status status, int epicId) {
-        SubtaskView res = super.createSubtask(title, description, status, epicId);
+    public SubtaskView createSubtask(String title, String description, Status status, LocalDateTime startTime, Duration duration, int epicId) {
+        SubtaskView res = super.createSubtask(title, description, status, startTime, duration, epicId);
         dump();
         return res;
     }
@@ -177,8 +180,10 @@ public class FileBackedTaskManager extends AbstractTaskManager {
     static void main() {
         TaskManager tm = new FileBackedTaskManager(Path.of("tasks.csv"));
 
-        tm.createTask("task3", "description", Status.NEW);
-        tm.createTask("task2", "description", Status.IN_PROGRESS);
+        tm.createTask("task3", "description", Status.NEW,
+                LocalDateTime.parse("2007-12-03T10:15:30."), Duration.ofSeconds(10, 0));
+        tm.createTask("task2", "description", Status.IN_PROGRESS,
+                LocalDateTime.parse("2007-12-03T10:15:30."), Duration.ofSeconds(10, 0));
 
         TaskView view = tm.getTask(2);
         System.out.println(view);

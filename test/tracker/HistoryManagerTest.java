@@ -1,11 +1,12 @@
 package tracker;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import tracker.HistoryManager.HistoryManager;
 import tracker.issue.*;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,12 +18,15 @@ class HistoryManagerTest {
     private Task task2;
     private Task task3;
 
+    private final static LocalDateTime defaultStartTime = LocalDateTime.parse("2007-12-03T10:15:30.");
+    private final static Duration defaultDuration = Duration.ofSeconds(10, 0);
+
     @BeforeEach
     void setUp() {
         historyManager = Managers.getDefaultHistory();
-        task1 = new Task("Task 1", "Description 1", 1, Status.NEW);
-        task2 = new Task("Task 2", "Description 2", 2, Status.NEW);
-        task3 = new Task("Task 3", "Description 3", 3, Status.NEW);
+        task1 = new Task("Task 1", "Description 1", 1, Status.NEW, defaultStartTime, defaultDuration);
+        task2 = new Task("Task 2", "Description 2", 2, Status.NEW, defaultStartTime, defaultDuration);
+        task3 = new Task("Task 3", "Description 3", 3, Status.NEW, defaultStartTime, defaultDuration);
     }
 
     @Test

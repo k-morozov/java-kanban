@@ -1,10 +1,20 @@
 package tracker.issue;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 public class CSVFormatter implements Formatter {
 
     @Override
     public String serialize(Task task) {
-        return task.getId() + ",TASK," + task.getTitle() + "," + task.getStatus() + ',' + task.getDescription();
+        StringBuilder builder = new StringBuilder();
+
+        builder.append(task.getId());
+        builder.append(",TASK");
+
+        serializeIssue(builder, task);
+
+        return builder.toString();
     }
 
     @Override
@@ -16,24 +26,63 @@ public class CSVFormatter implements Formatter {
         String status = tokens[3];
         String description = tokens[4];
         if ("TASK".equals(type)) {
+            if (tokens.length > 5) {
+                String startTime = tokens[5];
+                String duration = tokens[6];
+
+                return new Task(title, description, Integer.parseInt(id), Status.valueOf(status),
+                        LocalDateTime.parse(startTime), Duration.parse(duration));
+            }
             return new Task(title, description, Integer.parseInt(id), Status.valueOf(status));
         }
         if ("EPIC".equals(type)) {
             return new Epic(title, description, Integer.parseInt(id));
         }
-        String epicId = tokens[5];
-        return new Subtask(title, description, Integer.parseInt(id), Status.valueOf(status), Integer.parseInt(epicId));
+        String startTime = tokens[5];
+        String duration = tokens[6];
+        String epicId = tokens[7];
+        return new Subtask(title, description, Integer.parseInt(id), Status.valueOf(status),
+                LocalDateTime.parse(startTime), Duration.parse(duration), Integer.parseInt(epicId));
     }
 
     @Override
     public String serialize(Epic epic) {
-        return epic.getId() + ",EPIC," + epic.getTitle() + "," + epic.getStatus() + ',' + epic.getDescription();
+        StringBuilder builder = new StringBuilder();
+
+        builder.append(epic.getId());
+        builder.append(",EPIC");
+
+        serializeIssue(builder, epic);
+
+        return builder.toString();
     }
 
 
     @Override
     public String serialize(Subtask subtask) {
-        return subtask.getId() + ",SUBTASK," + subtask.getTitle() + "," + subtask.getStatus() + ','
-                + subtask.getDescription() + ',' + subtask.getEpicId();
+        StringBuilder builder = new StringBuilder();
+
+        builder.append(subtask.getId());
+        builder.append(",SUBTASK");
+
+        serializeIssue(builder, subtask);
+
+        builder.append(",").append(subtask.getEpicId());
+
+        return builder.toString();
+    }
+
+    static void serializeIssue(StringBuilder builder, ReadableIssue issue) {
+        builder.append(",").append(issue.getTitle());
+        builder.append(",").append(issue.getStatus());
+        builder.append(",").append(issue.getDescription());
+
+        if (issue.getStartTime().isPresent()) {
+            builder.append(",").append(issue.getStartTime().get());
+        }
+
+        if (issue.getDuration().isPresent()) {
+            builder.append(",").append(issue.getDuration().get());
+        }
     }
 }
