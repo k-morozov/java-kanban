@@ -49,6 +49,4 @@ public interface TaskManager {
     List<ReadableIssue> getHistory();
 
     List<ReadableIssue> getPrioritizedTasks();
-
-    List<ReadableIssue> getPrioritizedSubTasks();
 }

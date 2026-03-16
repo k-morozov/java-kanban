@@ -10,8 +10,10 @@ import tracker.issue.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 abstract class AbstractTaskManager implements TaskManager {
     private final HistoryManager historyManager;
@@ -50,16 +52,11 @@ abstract class AbstractTaskManager implements TaskManager {
     }
 
     private void validate(ReadableIssue issue) {
-        List<ReadableIssue> tasks = getPrioritizedTasks();
-        validate(issue, tasks);
-        List<ReadableIssue> subtasks = getPrioritizedSubTasks();
-        validate(issue, subtasks);
-    }
-
-    private void validate(ReadableIssue issue, List<ReadableIssue> issues) {
         if (issue.getStartTime().isEmpty()) {
             return;
         }
+
+        List<ReadableIssue> issues = getPrioritizedTasks();
         boolean r = issues.stream().anyMatch(candidate -> isConflictTime(issue, candidate));
         if (r) {
             throw new ConflictIssueTimeException("");
@@ -264,12 +261,9 @@ abstract class AbstractTaskManager implements TaskManager {
 
     @Override
     public List<ReadableIssue> getPrioritizedTasks() {
-        return getAllTasks().stream().map(task -> (ReadableIssue)task).toList();
-    }
-
-    @Override
-    public List<ReadableIssue> getPrioritizedSubTasks() {
-        return getAllSubtasks().stream().map(subtask -> (ReadableIssue)subtask).toList();
+        List<ReadableIssue> tasks = getAllTasks().stream().map(task -> (ReadableIssue)task).toList();
+        List<ReadableIssue> subtasks = getAllSubtasks().stream().map(subtask -> (ReadableIssue)subtask).toList();
+        return MergeSorted.mergeSorted(tasks, subtasks);
     }
 
     private void updateEpicStatus(int epicId) {
