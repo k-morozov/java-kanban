@@ -57,6 +57,9 @@ abstract class AbstractTaskManager implements TaskManager {
     }
 
     private void validate(ReadableIssue issue, List<ReadableIssue> issues) {
+        if (issue.getStartTime().isEmpty()) {
+            return;
+        }
         boolean r = issues.stream().anyMatch(candidate -> isConflictTime(issue, candidate));
         if (r) {
             throw new ConflictIssueTimeException("");
@@ -74,7 +77,6 @@ abstract class AbstractTaskManager implements TaskManager {
 
     protected TaskView createTask(int id, String title, String description, Status status, LocalDateTime startTime, Duration duration) {
         Task task = new Task(title, description, id, status, startTime, duration);
-        validate(task);
         return save(task);
     }
 
@@ -175,7 +177,6 @@ abstract class AbstractTaskManager implements TaskManager {
     protected SubtaskView createSubtask(int id, String title, String description, Status status,
                                         LocalDateTime startTime, Duration duration, int epicId) {
         Subtask subtask = new Subtask(title, description, id, status, startTime, duration, epicId);
-        validate(subtask);
         return save(subtask);
     }
 
@@ -318,6 +319,7 @@ abstract class AbstractTaskManager implements TaskManager {
 
         SubtaskView sb = sbs.getFirst();
         LocalDateTime start = sb.getStartTime().orElseThrow();
+        Duration duration = sb.getDuration().orElseThrow();
         LocalDateTime end = sb.getEndTime().orElseThrow();
 
         for (int i = 1; i < sbs.size(); i++) {
@@ -330,8 +332,10 @@ abstract class AbstractTaskManager implements TaskManager {
             if (candidateEnd.isAfter(end)) {
                 end = candidateEnd;
             }
+
+            duration = duration.plus(sbs.get(i).getDuration().orElseThrow());
         }
 
-        epic.updateTime(start, end);
+        epic.updateTime(start, duration, end);
     }
 }

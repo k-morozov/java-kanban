@@ -35,15 +35,20 @@ public final class Epic extends AbstractIssue implements ReadableEpic {
         subtaskIds.clear();
     }
 
-    public void updateTime(LocalDateTime start, LocalDateTime end) {
+    public void updateTime(LocalDateTime start, Duration duration, LocalDateTime end) {
         this.startTime = Optional.of(start);
         this.endTime = Optional.of(end);
-        this.duration = Optional.of(Duration.between(start, end));
+        this.duration = Optional.of(duration);
     }
 
     public void resetTime() {
         this.startTime = Optional.empty();
         this.endTime = Optional.empty();
         this.duration = Optional.empty();
+    }
+
+    @Override
+    public Optional<LocalDateTime> getEndTime() {
+        return endTime;
     }
 }

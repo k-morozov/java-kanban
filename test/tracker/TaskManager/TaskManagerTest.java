@@ -323,13 +323,13 @@ abstract class TaskManagerTest {
 
         assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:15."));
         assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:50."));
-        assertEquals(epic.getDuration().get(), Duration.ofSeconds(35, 0));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(30, 0));
 
         taskManager.deleteSubtask(sb1.getId());
 
         assertEquals(epic.getStartTime().get(), LocalDateTime.parse("2007-12-03T10:15:15."));
         assertEquals(epic.getEndTime().get(), LocalDateTime.parse("2007-12-03T10:15:50."));
-        assertEquals(epic.getDuration().get(), Duration.ofSeconds(35, 0));
+        assertEquals(epic.getDuration().get(), Duration.ofSeconds(20, 0));
 
         taskManager.deleteSubtask(sb2.getId());
 
