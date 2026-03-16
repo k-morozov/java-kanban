@@ -10,10 +10,8 @@ import tracker.issue.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 abstract class AbstractTaskManager implements TaskManager {
     private final HistoryManager historyManager;
