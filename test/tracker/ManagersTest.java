@@ -5,6 +5,7 @@ import tracker.HistoryManager.HistoryManager;
 import tracker.HistoryManager.InMemoryHistoryManager;
 import tracker.TaskManager.ConflictIssueTimeException;
 import tracker.TaskManager.InMemoryTaskManager;
+import tracker.TaskManager.NotFoundException;
 import tracker.TaskManager.TaskManager;
 import tracker.issue.TaskView;
 import tracker.issue.Status;
@@ -64,7 +65,7 @@ class ManagersTest {
         TaskView task1 = manager1.createTask("Задача 1", "Описание", Status.NEW, defaultStartTime, defaultDuration);
 
         assertNotNull(manager1.getTask(task1.getId()));
-        assertNull(manager2.getTask(task1.getId()));
+        assertThrows(NotFoundException.class, () -> manager2.getTask(task1.getId()));
     }
 
     @Test
