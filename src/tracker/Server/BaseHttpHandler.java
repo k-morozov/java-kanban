@@ -17,10 +17,10 @@ public abstract class BaseHttpHandler implements HttpHandler {
         this.manager = manager;
     }
 
-    protected void sendText(HttpExchange httpExchange, int code, String text) throws IOException {
+    protected void sendText(HttpExchange httpExchange, HttpStatusCode code, String text) throws IOException {
         byte[] resp = text.getBytes(StandardCharsets.UTF_8);
         httpExchange.getResponseHeaders().add("Content-Type", "application/json;charset=utf-8");
-        httpExchange.sendResponseHeaders(code, resp.length);
+        httpExchange.sendResponseHeaders(code.getCode(), resp.length);
 
         try (OutputStream os = httpExchange.getResponseBody()) {
             os.write(resp);
@@ -28,14 +28,14 @@ public abstract class BaseHttpHandler implements HttpHandler {
     }
 
     protected void sendNotFound(HttpExchange httpExchange) throws IOException {
-        httpExchange.sendResponseHeaders(404, 0);
+        httpExchange.sendResponseHeaders(HttpStatusCode.NOT_FOUND.getCode(), 0);
     }
 
     protected void sendHasInteractions(HttpExchange httpExchange) throws IOException {
-        httpExchange.sendResponseHeaders(406, 0);
+        httpExchange.sendResponseHeaders(HttpStatusCode.NOT_ACCEPTABLE.getCode(), 0);
     }
 
     protected void sendServerInternalError(HttpExchange httpExchange) throws IOException {
-        httpExchange.sendResponseHeaders(500, 0);
+        httpExchange.sendResponseHeaders(HttpStatusCode.INTERNAL_SERVER_ERROR.getCode(), 0);
     }
 }

@@ -37,6 +37,6 @@ class PrioritizedHandler extends BaseHttpHandler {
                 .map(PrioritizedGetOutput::from)
                 .toList();
 
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 }

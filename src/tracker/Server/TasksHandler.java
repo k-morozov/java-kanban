@@ -104,7 +104,7 @@ class TasksHandler extends BaseHttpHandler {
         TaskCreateOutput output = new TaskCreateOutput();
         output.taskId = view.getId();
 
-        sendText(httpExchange, 201, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.CREATED, gson.toJson(output));
     }
 
     private void doGetAllTasks(HttpExchange httpExchange) throws IOException {
@@ -113,7 +113,7 @@ class TasksHandler extends BaseHttpHandler {
                 .map(TaskGetOutput::from)
                 .toList();
 
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 
     private void doGetTask(HttpExchange httpExchange, String taskId) throws IOException {
@@ -126,7 +126,7 @@ class TasksHandler extends BaseHttpHandler {
         }
 
         TaskGetOutput output = TaskGetOutput.from(view);
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 
     private void doUpdateTask(HttpExchange httpExchange, String taskId) throws IOException {
@@ -147,7 +147,7 @@ class TasksHandler extends BaseHttpHandler {
             return;
         }
 
-        sendText(httpExchange, 201, gson.toJson(""));
+        sendText(httpExchange, HttpStatusCode.CREATED, gson.toJson(""));
     }
 
     private void doDeleteTask(HttpExchange httpExchange, String taskId) throws IOException {
@@ -158,6 +158,6 @@ class TasksHandler extends BaseHttpHandler {
             return;
         }
 
-        sendText(httpExchange, 200, gson.toJson(""));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(""));
     }
 }

@@ -49,6 +49,6 @@ class HistoryHandler extends BaseHttpHandler {
                 .map(HistoryGetOutput::from)
                 .toList();
 
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 }

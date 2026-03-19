@@ -92,7 +92,7 @@ class EpicsHandler extends BaseHttpHandler {
         EpicCreateOutput output = new EpicCreateOutput();
         output.epicId = view.getId();
 
-        sendText(httpExchange, 201, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.CREATED, gson.toJson(output));
     }
 
     private void doGetAllEpics(HttpExchange httpExchange) throws IOException {
@@ -101,7 +101,7 @@ class EpicsHandler extends BaseHttpHandler {
                 .map(EpicGetOutput::from)
                 .toList();
 
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 
     private void doGetEpic(HttpExchange httpExchange, String epicId) throws IOException {
@@ -114,7 +114,7 @@ class EpicsHandler extends BaseHttpHandler {
         }
 
         EpicGetOutput output = EpicGetOutput.from(view);
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 
     private void doUpdateEpic(HttpExchange httpExchange, String epicId) throws IOException {
@@ -131,7 +131,7 @@ class EpicsHandler extends BaseHttpHandler {
             return;
         }
 
-        sendText(httpExchange, 201, gson.toJson(""));
+        sendText(httpExchange, HttpStatusCode.CREATED, gson.toJson(""));
     }
 
     private void doDeleteEpic(HttpExchange httpExchange, String epicId) throws IOException {
@@ -142,7 +142,7 @@ class EpicsHandler extends BaseHttpHandler {
             return;
         }
 
-        sendText(httpExchange, 200, gson.toJson(""));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(""));
     }
 
     private void doGetEpicSubtasks(HttpExchange httpExchange, String epicId) throws IOException {
@@ -152,6 +152,6 @@ class EpicsHandler extends BaseHttpHandler {
                 .map(SubtaskGetOutput::from)
                 .toList();
 
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 }

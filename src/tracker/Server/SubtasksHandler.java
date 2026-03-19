@@ -113,7 +113,7 @@ class SubtasksHandler extends BaseHttpHandler {
         TaskCreateOutput output = new TaskCreateOutput();
         output.taskId = view.getId();
 
-        sendText(httpExchange, 201, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.CREATED, gson.toJson(output));
     }
 
     private void doGetAllSubtasks(HttpExchange httpExchange) throws IOException {
@@ -122,7 +122,7 @@ class SubtasksHandler extends BaseHttpHandler {
                 .map(SubtaskGetOutput::from)
                 .toList();
 
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 
     private void doGetSubtask(HttpExchange httpExchange, String subtaskId) throws IOException {
@@ -135,7 +135,7 @@ class SubtasksHandler extends BaseHttpHandler {
         }
 
         SubtaskGetOutput output = SubtaskGetOutput.from(view);
-        sendText(httpExchange, 200, gson.toJson(output));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(output));
     }
 
     private void doUpdateSubtask(HttpExchange httpExchange, String subtaskId) throws IOException {
@@ -163,7 +163,7 @@ class SubtasksHandler extends BaseHttpHandler {
             return;
         }
 
-        sendText(httpExchange, 201, gson.toJson(""));
+        sendText(httpExchange, HttpStatusCode.CREATED, gson.toJson(""));
     }
 
     private void doDeleteSubtask(HttpExchange httpExchange, String subtaskId) throws IOException {
@@ -174,6 +174,6 @@ class SubtasksHandler extends BaseHttpHandler {
             return;
         }
 
-        sendText(httpExchange, 200, gson.toJson(""));
+        sendText(httpExchange, HttpStatusCode.OK, gson.toJson(""));
     }
 }
