@@ -1,5 +1,6 @@
 package tracker.IssueRepo;
 
+import tracker.TaskManager.NotFoundException;
 import tracker.issue.Issue;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public final class InMemoryPolicy<T extends Issue> implements Policy<T> {
     @Override
     public void update(T issue) {
         if (!issues.containsKey(issue.getId())) {
-            throw new IllegalStateException("Issue does not exist for updating");
+            throw new NotFoundException("Issue does not exist for updating");
         }
         issues.put(issue.getId(), issue);
     }
@@ -43,6 +44,9 @@ public final class InMemoryPolicy<T extends Issue> implements Policy<T> {
 
     @Override
     public T deleteById(int id) {
+        if (!issues.containsKey(id)) {
+            throw new NotFoundException("Issue does not exist for deleting");
+        }
         return issues.remove(id);
     }
 

@@ -1,5 +1,6 @@
 package tracker.IssueRepo;
 
+import tracker.TaskManager.NotFoundException;
 import tracker.issue.Issue;
 
 import java.util.HashMap;
@@ -41,7 +42,7 @@ public final class InMemoryPrioritizedPolicy<T extends Issue> implements Policy<
     @Override
     public void update(T issue) {
         if (!issues.containsKey(issue.getId())) {
-            throw new IllegalStateException("Issue does not exist for updating");
+            throw new NotFoundException("Issue does not exist for updating");
         }
         Issue old = issues.put(issue.getId(), issue);
         if (old != null && old.getStartTime().isPresent()) {
@@ -65,6 +66,9 @@ public final class InMemoryPrioritizedPolicy<T extends Issue> implements Policy<
 
     @Override
     public T deleteById(int id) {
+        if (!issues.containsKey(id)) {
+            throw new NotFoundException("Issue does not exist for deleting");
+        }
         T removed = issues.remove(id);
         if (removed != null && removed.getStartTime().isPresent()) {
             prioritizedIssues.remove(removed);

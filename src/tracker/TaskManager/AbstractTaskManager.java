@@ -85,7 +85,7 @@ abstract class AbstractTaskManager implements TaskManager {
     public TaskView getTask(int id) {
         Task task = repoManager.get(Task.class, id);
         if (task == null) {
-            return null;
+            throw new NotFoundException("Task " + id + " not found");
         }
         return new TaskView(task);
     }
@@ -130,7 +130,7 @@ abstract class AbstractTaskManager implements TaskManager {
     public EpicView getEpic(int id) {
         Epic epic = repoManager.get(Epic.class, id);
         if (epic == null) {
-            return null;
+            throw new NotFoundException("Epic " + id + " not found");
         }
         return new EpicView(epic);
     }
@@ -150,7 +150,7 @@ abstract class AbstractTaskManager implements TaskManager {
     public void deleteEpic(int id) {
         Epic epic = repoManager.remove(Epic.class, id);
         if (epic == null) {
-            throw new IllegalArgumentException("Epic not found");
+            throw new NotFoundException("Epic not found");
         }
         ArrayList<Integer> copy = new ArrayList<>();
         copy.addAll(epic.getSubtaskIds());
@@ -178,7 +178,7 @@ abstract class AbstractTaskManager implements TaskManager {
     protected SubtaskView save(Subtask subtask) {
         Epic epic = repoManager.get(Epic.class, subtask.getEpicId());
         if (epic == null) {
-            throw new IllegalArgumentException("Not found parent epic");
+            throw new NotFoundException("Not found parent epic");
         }
 
         validate(subtask);
@@ -196,7 +196,7 @@ abstract class AbstractTaskManager implements TaskManager {
     public SubtaskView getSubtask(int id) {
         Subtask subtask = repoManager.get(Subtask.class, id);
         if (subtask == null) {
-            return null;
+            throw new NotFoundException("Subtask " + id + " not found");
         }
         return new SubtaskView(subtask);
     }

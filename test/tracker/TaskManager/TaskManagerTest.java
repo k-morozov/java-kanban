@@ -1,10 +1,8 @@
 package tracker.TaskManager;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import tracker.Managers;
 import tracker.issue.*;
 
 import java.time.Duration;
@@ -132,7 +130,7 @@ abstract class TaskManagerTest {
 
         taskManager.deleteTask(taskId);
 
-        assertNull(taskManager.getTask(taskId));
+        assertThrows(NotFoundException.class, () -> taskManager.getTask(taskId));
     }
 
     @Test
@@ -165,7 +163,7 @@ abstract class TaskManagerTest {
 
     @Test
     void shouldReturnNullWhenCreatingSubtaskWithNonExistentEpic() {
-        Assertions.assertThrows(IllegalArgumentException.class, () -> taskManager.createSubtask("Подзадача", "Описание",
+        Assertions.assertThrows(NotFoundException.class, () -> taskManager.createSubtask("Подзадача", "Описание",
                 Status.NEW, defaultStartTime, defaultDuration, 999));
     }
 
@@ -212,7 +210,7 @@ abstract class TaskManagerTest {
         TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW, defaultStartTime, defaultDuration);
         EpicView epic = taskManager.createEpic("Эпик", "Описание");
 
-        TaskView r1 = taskManager.getTask(task.getId());
+        taskManager.getTask(task.getId());
         taskManager.getEpic(epic.getId());
 
         List<ReadableIssue> history = taskManager.getHistory();
@@ -236,10 +234,22 @@ abstract class TaskManagerTest {
         assertEquals(1, history.size());
         assertEquals(epic.getId(), history.get(0).getId());
 
-        taskManager.deleteTask(epic.getId());
+        taskManager.deleteEpic(epic.getId());
         history = taskManager.getHistory();
 
         assertTrue(history.isEmpty());
+    }
+
+    @Test
+    void failedRemoveTaskTwice() {
+        TaskView task = taskManager.createTask("Задача", "Описание", Status.NEW, defaultStartTime, defaultDuration);
+        taskManager.deleteTask(task.getId());
+        assertThrows(NotFoundException.class, () -> taskManager.deleteTask(task.getId()));
+    }
+
+    @Test
+    void failedRemoveNonCreatedTask() {
+        assertThrows(NotFoundException.class, () -> taskManager.deleteTask(1));
     }
 
     @Deprecated
@@ -266,9 +276,9 @@ abstract class TaskManagerTest {
 
         taskManager.deleteEpic(epic.getId());
 
-        assertNull(taskManager.getEpic(epic.getId()));
-        assertNull(taskManager.getSubtask(subtask1.getId()));
-        assertNull(taskManager.getSubtask(subtask2.getId()));
+        assertThrows(NotFoundException.class, () -> taskManager.getEpic(epic.getId()));
+        assertThrows(NotFoundException.class, () -> taskManager.getSubtask(subtask1.getId()));
+        assertThrows(NotFoundException.class, () ->taskManager.getSubtask(subtask2.getId()));
     }
 
     @Test
@@ -281,7 +291,7 @@ abstract class TaskManagerTest {
 
         taskManager.deleteSubtask(subtask.getId());
 
-        assertNull(taskManager.getSubtask(subtask.getId()));
+        assertThrows(NotFoundException.class, () -> taskManager.getSubtask(subtask.getId()));
         assertEquals(0, taskManager.getEpicSubtasks(epic.getId()).size());
         assertTrue(epic.getSubtaskIds().isEmpty());
     }
